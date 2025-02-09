@@ -27,32 +27,32 @@ The binary will be available in `target/release/`.
 Before using the tool, you need to set your API Mimic authentication token:
 
 ```bash
-apimimic-cli set-token YOUR_TOKEN_HERE
+apimimic set-token YOUR_TOKEN_HERE
 ```
 
 Or provide it directly when running the server:
 
 ```bash
-apimimic-cli run --token YOUR_TOKEN_HERE
+apimimic run --token YOUR_TOKEN_HERE
 ```
 
 ### Starting the Server
 
 Basic usage (starts server on default port 8080):
 ```bash
-apimimic-cli run
+apimimic run
 ```
 
 With custom configuration:
 ```bash
-apimimic-cli run --listen 127.0.0.1:3000
+apimimic run --listen 127.0.0.1:3000
 ```
 
 ### Proxy Mode
 
 To enable proxy mode (forwarding requests to a local backend):
 ```bash
-apimimic-cli run --proxy --listen 127.0.0.1:3000 --backend http://localhost:3001
+apimimic run --proxy --listen 127.0.0.1:3000 --backend http://localhost:3001
 ```
 
 ### Command Line Options
@@ -93,4 +93,24 @@ The tool includes comprehensive error handling for:
 
 ## License
 
-[Add your license information here] 
+MIT License
+
+Copyright (c) 2024 API Mimic
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE. 
