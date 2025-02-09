@@ -1,18 +1,17 @@
-# API Mimic CLI
+# Apimimic CLI
 
-A command-line interface tool for API mocking and proxying using [API Mimic](https://apimimic.com). This tool allows you to intercept HTTP requests and either return mocked responses from API Mimic service or proxy them to a local backend.
+A command-line interface tool for API mocking and proxying using [Apimimic](https://apimimic.com). This tool allows you to intercept HTTP requests and either return mocked responses from Apimimic service or proxy them to a local backend.
 
 ## Features
 
-- 🔄 Mock API responses using API Mimic service
+- 🔄 Mock API responses using Apimimic service
 - 🔀 Proxy mode for forwarding requests to local backend
 - 🔐 Token-based authentication
 - 🌐 Configurable listening address and remote API endpoint
-- 💾 Persistent token storage
 
 ## Installation
 
-To install the API Mimic CLI, you'll need to have Rust and Cargo installed on your system. Then you can build the project:
+To install the Apimimic CLI, you'll need to have Rust and Cargo installed on your system. Then you can build the project:
 
 ```bash
 cargo build --release
@@ -24,7 +23,7 @@ The binary will be available in `target/release/`.
 
 ### Setting Authentication Token
 
-Before using the tool, you need to set your API Mimic authentication token:
+Before using the tool, you need to set your Apimimic authentication token:
 
 ```bash
 apimimic set-token YOUR_TOKEN_HERE
@@ -77,16 +76,16 @@ The tool stores configuration (including your authentication token) in the follo
 
 1. The tool starts an HTTP server on the specified address
 2. For each incoming request:
-   - Forwards the request to the API Mimic service
-   - If proxy mode is enabled and the API Mimic response indicates proxying:
+   - Forwards the request to the Apimimic service
+   - If proxy mode is enabled and the Apimimic response indicates proxying:
      - Forwards the original request to the specified backend
-   - Otherwise, returns the response from API Mimic
+   - Otherwise, returns the response from Apimimic
 
 ## Error Handling
 
 The tool includes comprehensive error handling for:
 - Missing authentication token
-- Failed connections to API Mimic service
+- Failed connections to Apimimic service
 - Failed connections to local backend
 - Invalid configuration
 - Request/response processing errors
