@@ -1,6 +1,6 @@
 # Apimimic CLI
 
-A command-line interface tool for API mocking and proxying using [Apimimic](https://apimimic.com). This tool allows you to intercept HTTP requests and either return mocked responses from Apimimic service or proxy unmocked requests to a local backend.
+A command-line interface tool for API mocking and proxying using [Apimimic](https://apimimic.com). This tool allows you to intercept HTTP requests and either return mocked responses from Apimimic service and proxy unmocked requests to a local backend.
 
 ## Features
 
