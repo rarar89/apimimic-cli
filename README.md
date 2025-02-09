@@ -60,7 +60,7 @@ apimimic run --listen 127.0.0.1:3000 --project YOUR_PROJECT_ID --backend http://
   - `-l, --listen <address>`: Local address to listen on (default: 0.0.0.0:8080)
   - `-r, --remote <url>`: Remote API Mimic URL (default: https://cli.apimimic.com)
   - `-t, --token <token>`: Authorization token (overrides saved token)
-  - `-p, --project <id>`: Project ID (required)
+  - `-p, --project <id>`: Project ID
   - `--backend <url>`: Local backend URL (required if proxy mode is enabled on apimimic.com)
 
 ## Configuration
