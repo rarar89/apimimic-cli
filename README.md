@@ -23,16 +23,20 @@ The binary will be available in `target/release/`.
 
 ### Setting Authentication Token
 
-Before using the tool, you need to set your Apimimic authentication token:
+Before using the tool, you need to set your Apimimic authentication token and project ID:
 
 ```bash
 apimimic set-token YOUR_TOKEN_HERE
 ```
 
+```bash
+apimimic set-project YOUR_PROJECT_ID
+```
+
 Or provide it directly when running the server:
 
 ```bash
-apimimic run --token YOUR_TOKEN_HERE
+apimimic run --token YOUR_TOKEN_HERE --project YOUR_PROJECT_ID
 ```
 
 ### Starting the Server
@@ -44,14 +48,7 @@ apimimic run
 
 With custom configuration:
 ```bash
-apimimic run --listen 127.0.0.1:3000
-```
-
-### Proxy Mode
-
-To enable proxy mode (forwarding requests to a local backend):
-```bash
-apimimic run --proxy --listen 127.0.0.1:3000 --backend http://localhost:3001
+apimimic run --listen 127.0.0.1:3000 --project YOUR_PROJECT_ID --backend http://localhost:3001
 ```
 
 ### Command Line Options
@@ -62,8 +59,8 @@ apimimic run --proxy --listen 127.0.0.1:3000 --backend http://localhost:3001
   - `-l, --listen <address>`: Local address to listen on (default: 0.0.0.0:8080)
   - `-r, --remote <url>`: Remote API Mimic URL (default: https://cli.apimimic.com)
   - `-t, --token <token>`: Authorization token (overrides saved token)
-  - `--proxy`: Enable proxy mode
-  - `--backend <url>`: Local backend URL (required if proxy mode is enabled)
+  - `-p, --project <id>`: Project ID (required)
+  - `--backend <url>`: Local backend URL (required if proxy mode is enabled on apimimic.com)
 
 ## Configuration
 

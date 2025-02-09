@@ -15,6 +15,11 @@ pub enum Commands {
         /// The token to be saved.
         token: String,
     },
+    /// Save the default project ID.
+    SetProject {
+        /// The project ID to be saved.
+        project: String,
+    },
     /// Run the CLI utility (starts the HTTP server).
     Run {
         /// Project ID

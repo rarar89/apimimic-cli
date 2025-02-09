@@ -7,6 +7,7 @@ use std::path::PathBuf;
 #[derive(Serialize, Deserialize, Default)]
 pub struct Config {
     pub auth_token: String,
+    pub project: String,
 }
 
 /// Get the configuration file path in a cross-platform way.
