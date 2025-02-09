@@ -55,6 +55,7 @@ apimimic run --listen 127.0.0.1:3000 --project YOUR_PROJECT_ID --backend http://
 
 - `help`: Show help message
 - `set-token <token>`: Save the authentication token
+- `set-project <id>`: Save the project ID
 - `run`: Start the HTTP server with the following options:
   - `-l, --listen <address>`: Local address to listen on (default: 0.0.0.0:8080)
   - `-r, --remote <url>`: Remote API Mimic URL (default: https://cli.apimimic.com)
