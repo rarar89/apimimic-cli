@@ -2,7 +2,7 @@ use clap::{Parser, Subcommand};
 use directories::ProjectDirs;
 use serde::{Deserialize, Serialize};
 use std::fs;
-use std::io::{Read, Write};
+use std::io::Read;
 use std::path::PathBuf;
 use std::thread;
 use tiny_http::{Header, Request, Response, Server};
@@ -30,8 +30,6 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    /// Show help message.
-    Help,
     /// Save the authentication token.
     SetToken {
         /// The token to be saved.
@@ -96,7 +94,7 @@ fn save_config(config: &Config) -> std::io::Result<()> {
 
 /// Handles an individual incoming HTTP request.
 fn handle_request(
-    request: Request,
+    mut request: Request,
     remote_base: String,
     auth_token: String,
     proxy_enabled: bool,
@@ -114,24 +112,38 @@ fn handle_request(
     }
 
     // Construct the remote URL by concatenating the remote base with the request URL.
-    // (You might want to improve this by using the `url` crate in production.)
     let remote_url = format!("{}{}", remote_base.trim_end_matches('/'), request.url());
 
     // Forward the request to the remote API Mimic service.
-    let mut remote_req = ureq::request(request.method(), &remote_url);
-    remote_req.set("Authorization", &format!("Bearer {}", auth_token));
+    let method_str = match request.method() {
+        &tiny_http::Method::Get => "GET",
+        &tiny_http::Method::Post => "POST",
+        &tiny_http::Method::Put => "PUT",
+        &tiny_http::Method::Delete => "DELETE",
+        &tiny_http::Method::Head => "HEAD",
+        &tiny_http::Method::Connect => "CONNECT",
+        &tiny_http::Method::Options => "OPTIONS",
+        &tiny_http::Method::Trace => "TRACE",
+        &tiny_http::Method::Patch => "PATCH",
+        _ => "GET", // Default to GET for any unhandled methods
+    };
 
-    // Copy headers from the incoming request.
+    // Create a new request and collect headers
+    let mut headers = Vec::new();
     for header in request.headers() {
-        // Skip Host header since the client library sets it automatically.
-        if header.field.as_str().to_lowercase() == "host" {
+        if header.field.as_str().to_string().to_lowercase() == "host" {
             continue;
         }
-        remote_req.set(header.field.as_str(), header.value.as_str());
+        headers.push((
+            header.field.as_str().to_string(),
+            header.value.as_str().to_string()
+        ));
     }
 
     // Send the request (using send_bytes to support any method and binary body).
-    let remote_resp = remote_req.send_bytes(&body);
+    let remote_resp = ureq::request(method_str, &remote_url)
+        .set("Authorization", &format!("Bearer {}", auth_token))
+        .send_bytes(&body);
 
     let (status, resp_headers, resp_body) = match remote_resp {
         Ok(resp) => {
@@ -162,7 +174,7 @@ fn handle_request(
         if let Ok(remote_json) = serde_json::from_slice::<RemoteResponse>(&resp_body) {
             remote_json.proxy
         } else {
-            // If the response isn’t valid JSON, assume it’s a mocked response.
+            // If the response isn't valid JSON, assume it's a mocked response.
             false
         }
     } else {
@@ -175,22 +187,17 @@ fn handle_request(
         if let Some(backend) = backend_base {
             let backend_url = format!("{}{}", backend.trim_end_matches('/'), request.url());
             println!("Forwarding to backend: {}", backend_url);
-            let mut backend_req = ureq::request(request.method(), &backend_url);
-            // Copy original headers.
-            for header in request.headers() {
-                if header.field.as_str().to_lowercase() == "host" {
-                    continue;
-                }
-                backend_req.set(header.field.as_str(), header.value.as_str());
-            }
-            let backend_resp = backend_req.send_bytes(&body);
+            
+            let backend_resp = ureq::request(method_str, &backend_url)
+                .send_bytes(&body);
+
             match backend_resp {
                 Ok(resp) => {
                     let status = resp.status();
                     let mut headers = Vec::new();
                     for h in resp.headers_names() {
                         if let Some(val) = resp.header(&h) {
-                            headers.push(Header::from_bytes(&h, val).unwrap());
+                            headers.push(Header::from_bytes(h.as_bytes(), val.as_bytes()).unwrap());
                         }
                     }
                     let mut buf = Vec::new();
@@ -223,7 +230,7 @@ fn handle_request(
         // Build headers for tiny-http.
         let headers = resp_headers
             .into_iter()
-            .map(|(k, v)| Header::from_bytes(&k, &v).unwrap())
+            .map(|(k, v)| Header::from_bytes(k.as_bytes(), v.as_bytes()).unwrap())
             .collect::<Vec<_>>();
         let mut resp = Response::from_data(resp_body).with_status_code(status);
         for header in headers {
@@ -242,10 +249,6 @@ fn main() {
     let mut config = load_config();
 
     match &cli.command {
-        Some(Commands::Help) => {
-            // The auto-generated help from clap is usually enough.
-            Cli::command().print_help().unwrap();
-        }
         Some(Commands::SetToken { token }) => {
             config.auth_token = token.clone();
             if let Err(e) = save_config(&config) {
@@ -254,7 +257,7 @@ fn main() {
             }
             println!("Token saved successfully.");
         }
-        Some(Commands::Run { listen, remote, token, proxy, backend }) | None => {
+        Some(Commands::Run { listen, remote, token, proxy, backend }) => {
             // Use the token provided on the command line (if any) to override the saved token.
             if let Some(t) = token {
                 config.auth_token = t.clone();
@@ -292,6 +295,10 @@ fn main() {
                     handle_request(request, remote_base, auth_token, proxy_enabled, backend_base)
                 });
             }
+        }
+        None => {
+            // Default to showing help
+            let _ = Cli::parse_from(&["--help"]);
         }
     }
 }

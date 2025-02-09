@@ -9,7 +9,7 @@ path = "src/main.rs"
 
 [dependencies]
 clap = { version = "4", features = ["derive"] }
-tiny-http = "0.12"
+tiny_http = "0.12"
 ureq = "2.7"
 directories = "5"
 serde = { version = "1.0", features = ["derive"] }
