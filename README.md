@@ -25,13 +25,13 @@ The binary will be available in `target/release/`.
 You can pre-set your project key by running:
 
 ```bash
-apimimic set-project YOUR_PROJECT_ID
+apimimic set-project YOUR_PROJECT_KEY
 ```
 
 Or provide it directly when running the server:
 
 ```bash
-apimimic run --project YOUR_PROJECT_ID
+apimimic run --project YOUR_PROJECT_KEY
 ```
 
 ### Starting the Server
@@ -43,17 +43,17 @@ apimimic run
 
 With custom configuration:
 ```bash
-apimimic run --listen 127.0.0.1:3000 --project YOUR_PROJECT_ID --server http://localhost:3001
+apimimic run --listen 127.0.0.1:3000 --project YOUR_PROJECT_KEY --server http://localhost:3001
 ```
 
 ### Command Line Options
 
 - `help`: Show help message
-- `set-project <id>`: Save the project ID
+- `set-project <key>`: Save the project KEY
 - `run`: Start the HTTP server with the following options:
   - `-l, --listen <address>`: Local address to listen on (default: 0.0.0.0:8080)
   - `-r, --remote <url>`: Remote API Mimic URL (default: https://cli.apimimic.com)
-  - `-p, --project <id>`: Project ID
+  - `-p, --project <key>`: Project KEY
   - `--server <url>`: real api server URL (required if proxy mode is enabled on apimimic.com)
 
 ## Configuration
