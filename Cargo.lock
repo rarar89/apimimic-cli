@@ -71,6 +71,7 @@ dependencies = [
 name = "apimimic_cli"
 version = "0.1.0"
 dependencies = [
+ "base64",
  "clap",
  "directories",
  "env_logger",
@@ -79,6 +80,7 @@ dependencies = [
  "serde_json",
  "tiny_http",
  "ureq",
+ "url",
 ]
 
 [[package]]

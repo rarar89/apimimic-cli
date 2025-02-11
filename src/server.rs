@@ -3,6 +3,7 @@ use tiny_http::{Header, Request, Response, Server};
 use std::thread;
 use log::{info, error, debug};
 use serde_json::json;
+use url;
 
 /// Starts the HTTP server and handles incoming requests
 pub fn run_server(
@@ -73,15 +74,21 @@ fn handle_request(
 
     // In handle_request function, before sending the request to API Mimic:
     let request_url = request.url().to_string();
+
+    debug!("request_url: {}", request_url);
     
     // Create the JSON payload and serialize it
     let payload = json!({
         "method": method_str,
         "headers": original_headers.clone().into_iter().collect::<std::collections::HashMap<_, _>>(),
         "body": body,
-        "path": request_url.trim_start_matches('/')
+        "path": request_url.trim_start_matches('/').to_string() // Ensure path is a proper string
     });
-    let payload_str = serde_json::to_string(&payload).unwrap();
+
+ 
+
+    // Log the exact payload being sent for debugging
+    debug!("Raw JSON payload being sent: {}", payload_str);
 
     // Send the request to API Mimic service
     let mut request_builder = ureq::request("POST", &remote_url)
@@ -101,8 +108,11 @@ fn handle_request(
         debug!("Added header to API Mimic request: {} = {}", name, value);
     }
 
-    let remote_resp = request_builder.send_string(&payload_str);
+    debug!("Payload to API Mimic: {}", payload_str);
 
+    let remote_resp = request_builder.send_string(&payload_str) ;
+
+    // Response from API Mimic
     match remote_resp {
         Ok(resp) => {
             let status = resp.status();
@@ -138,12 +148,32 @@ fn handle_request(
                     
                     let mut proxy_request = ureq::request(method_str, &server_url);
                     
-                    // Add original request headers to proxy request
+                    // Add original request headers to proxy request, including the host header
+                    debug!("Original headers: {:?}", original_headers);
                     for (name, value) in original_headers {
+                        if name.to_lowercase() == "host" {
+                            // Skip the host header here as we'll set it separately
+                            continue;
+                        }
                         proxy_request = proxy_request.set(&name, &value);
                         debug!("Added header to proxy request: {} = {}", name, value);
                     }
 
+                    // Set the host header from the target server URL
+                    if let Ok(url) = url::Url::parse(&server_url) {
+                        if let Some(host) = url.host_str() {
+                            let host_value = if let Some(port) = url.port() {
+                                format!("{}:{}", host, port)
+                            } else {
+                                host.to_string()
+                            };
+                            proxy_request = proxy_request.set("Host", &host_value);
+                            debug!("Set host header for proxy request: {}", host_value);
+                        }
+                    }
+
+
+                    // Send the request to the target (real backend api) server
                     match proxy_request.send_bytes(&body) {
                         Ok(proxy_resp) => {
                             let proxy_status = proxy_resp.status();
