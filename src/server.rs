@@ -1,15 +1,8 @@
-use serde::Deserialize;
 use std::io::Read;
 use tiny_http::{Header, Request, Response, Server};
 use std::thread;
 use log::{info, error, debug};
 use serde_json::json;
-
-/// Structure of the JSON payload for API Mimic
-#[derive(Deserialize)]
-struct RemoteResponse {
-
-}
 
 /// Starts the HTTP server and handles incoming requests
 pub fn run_server(
@@ -76,16 +69,7 @@ fn handle_request(
     };
 
     // Collect original request headers
-    let mut original_headers = Vec::new();
-    for header in request.headers() {
-        if header.field.as_str().to_string().to_lowercase() == "host" {
-            continue;
-        }
-        original_headers.push((
-            header.field.as_str().to_string(),
-            header.value.as_str().to_string()
-        ));
-    }
+    let original_headers = process_headers(request.headers());
 
     // In handle_request function, before sending the request to API Mimic:
     let request_url = request.url().to_string();
@@ -95,7 +79,7 @@ fn handle_request(
         "method": method_str,
         "headers": original_headers.clone().into_iter().collect::<std::collections::HashMap<_, _>>(),
         "body": body,
-        "path": request_url
+        "path": request_url.trim_start_matches('/')
     });
     let payload_str = serde_json::to_string(&payload).unwrap();
 
@@ -222,4 +206,15 @@ fn handle_request(
             );
         }
     }
+}
+
+fn process_headers(headers: &[Header]) -> Vec<(String, String)> {
+    headers
+        .iter()
+        .filter(|header| header.field.as_str().to_string().to_lowercase() != "host")
+        .map(|header| (
+            header.field.as_str().to_string(),
+            header.value.as_str().to_string()
+        ))
+        .collect()
 } 
