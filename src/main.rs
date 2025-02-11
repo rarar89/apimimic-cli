@@ -4,8 +4,14 @@ mod server;
 
 use clap::Parser;
 use cli::{Cli, Commands};
+use env_logger::Env;
 
 fn main() {
+    // Initialize logging
+    env_logger::Builder::from_env(Env::default().default_filter_or("info"))
+        .format_timestamp_millis()
+        .init();
+
     let cli = Cli::parse();
 
     // Load any saved configuration.
