@@ -14,7 +14,6 @@ pub fn run_server(
     listen: &str,
     remote_base: String,
     project_id: String,
-    auth_token: String,
     proxy_enabled: bool,
     backend_base: Option<String>,
 ) {
@@ -24,11 +23,10 @@ pub fn run_server(
     // Handle each incoming request in its own thread.
     for request in server.incoming_requests() {
         let remote_base = remote_base.clone();
-        let auth_token = auth_token.clone();
         let backend_base = backend_base.clone();
         let project_id = project_id.clone();
         thread::spawn(move || {
-            handle_request(request, remote_base, project_id, auth_token, proxy_enabled, backend_base)
+            handle_request(request, remote_base, project_id, proxy_enabled, backend_base)
         });
     }
 }
@@ -38,7 +36,6 @@ fn handle_request(
     mut request: Request,
     remote_base: String,
     project_id: String,
-    auth_token: String,
     proxy_enabled: bool,
     backend_base: Option<String>,
 ) {
@@ -84,7 +81,6 @@ fn handle_request(
 
     // Send the request (using send_bytes to support any method and binary body).
     let remote_resp = ureq::request(method_str, &remote_url)
-        .set("Apimimic-authorization", &format!("Bearer {}", auth_token))
         .set("Apimimic-project-id", &project_id)
         .send_bytes(&body);
 

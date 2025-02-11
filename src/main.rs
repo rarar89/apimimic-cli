@@ -12,14 +12,6 @@ fn main() {
     let mut config = config::load_config();
 
     match &cli.command {
-        Some(Commands::SetToken { token }) => {
-            config.auth_token = token.clone();
-            if let Err(e) = config::save_config(&config) {
-                eprintln!("Failed to save token: {}", e);
-                std::process::exit(1);
-            }
-            println!("Token saved successfully.");
-        }
         Some(Commands::SetProject { project }) => {
             config.project = project.clone();
             if let Err(e) = config::save_config(&config) {
@@ -29,14 +21,6 @@ fn main() {
             println!("Project saved successfully.");
         }
         Some(Commands::Run { project, listen, remote, token, proxy, backend }) => {
-            // Use the token provided on the command line (if any) to override the saved token.
-            if let Some(t) = token {
-                config.auth_token = t.clone();
-                // Also save the new token.
-                if let Err(e) = config::save_config(&config) {
-                    eprintln!("Failed to save token: {}", e);
-                }
-            }
 
             // Use the project provided on the command line to override the saved project.
             let project = if project.is_empty() {
@@ -49,11 +33,6 @@ fn main() {
                 project.clone()
             };
 
-            if config.auth_token.is_empty() {
-                eprintln!("No token provided. Use the --token flag or `set-token` command.");
-                std::process::exit(1);
-            }
-
             if *proxy && backend.is_none() {
                 eprintln!("Proxy mode enabled but no backend URL provided.");
                 std::process::exit(1);
@@ -63,7 +42,6 @@ fn main() {
                 listen,
                 remote.clone(),
                 project,
-                config.auth_token,
                 *proxy,
                 backend.clone(),
             );

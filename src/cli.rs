@@ -10,11 +10,6 @@ pub struct Cli {
 
 #[derive(Subcommand)]
 pub enum Commands {
-    /// Save the authentication token.
-    SetToken {
-        /// The token to be saved.
-        token: String,
-    },
     /// Save the default project ID.
     SetProject {
         /// The project ID to be saved.
