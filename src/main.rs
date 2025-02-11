@@ -20,8 +20,7 @@ fn main() {
             }
             println!("Project saved successfully.");
         }
-        Some(Commands::Run { project, listen, remote, token, proxy, backend }) => {
-
+        Some(Commands::Run { project, listen, remote, server }) => {
             // Use the project provided on the command line to override the saved project.
             let project = if project.is_empty() {
                 if config.project.is_empty() {
@@ -33,17 +32,12 @@ fn main() {
                 project.clone()
             };
 
-            if *proxy && backend.is_none() {
-                eprintln!("Proxy mode enabled but no backend URL provided.");
-                std::process::exit(1);
-            }
-
             server::run_server(
                 listen,
                 remote.clone(),
                 project,
-                *proxy,
-                backend.clone(),
+                server.is_some(),
+                server.clone(),
             );
         }
         None => {

@@ -1,12 +1,11 @@
 # Apimimic CLI
 
-A command-line interface tool for API mocking and proxying using [Apimimic](https://apimimic.com). This tool allows you to intercept HTTP requests and return mocked responses from Apimimic service and proxy unmocked requests to a local backend.
+A command-line interface tool for API mocking and proxying using [Apimimic](https://apimimic.com). This tool allows you to intercept HTTP requests and return mocked responses from Apimimic service and proxy unmocked requests to a local or remotebackend.
 
 ## Features
 
 - 🔄 Mock API responses using Apimimic service
-- 🔀 Proxy mode for forwarding unmocked requests to local backend
-- 🔐 Token-based authentication
+- 🔀 Proxy mode for forwarding unmocked requests to local or remote backend
 - 🌐 Configurable listening address and remote API endpoint
 
 ## Installation
@@ -21,13 +20,9 @@ The binary will be available in `target/release/`.
 
 ## Usage
 
-### Setting Authentication Token
+### Setting Project Key
 
-Before using the tool, you need to set your Apimimic authentication token and project ID:
-
-```bash
-apimimic set-token YOUR_TOKEN_HERE
-```
+You can pre-set your project key by running:
 
 ```bash
 apimimic set-project YOUR_PROJECT_ID
@@ -36,7 +31,7 @@ apimimic set-project YOUR_PROJECT_ID
 Or provide it directly when running the server:
 
 ```bash
-apimimic run --token YOUR_TOKEN_HERE --project YOUR_PROJECT_ID
+apimimic run --project YOUR_PROJECT_ID
 ```
 
 ### Starting the Server
@@ -48,20 +43,18 @@ apimimic run
 
 With custom configuration:
 ```bash
-apimimic run --listen 127.0.0.1:3000 --project YOUR_PROJECT_ID --backend http://localhost:3001
+apimimic run --listen 127.0.0.1:3000 --project YOUR_PROJECT_ID --server http://localhost:3001
 ```
 
 ### Command Line Options
 
 - `help`: Show help message
-- `set-token <token>`: Save the authentication token
 - `set-project <id>`: Save the project ID
 - `run`: Start the HTTP server with the following options:
   - `-l, --listen <address>`: Local address to listen on (default: 0.0.0.0:8080)
   - `-r, --remote <url>`: Remote API Mimic URL (default: https://cli.apimimic.com)
-  - `-t, --token <token>`: Authorization token (overrides saved token)
   - `-p, --project <id>`: Project ID
-  - `--backend <url>`: Local backend URL (required if proxy mode is enabled on apimimic.com)
+  - `--server <url>`: real api server URL (required if proxy mode is enabled on apimimic.com)
 
 ## Configuration
 
@@ -75,18 +68,9 @@ The tool stores configuration (including your authentication token) in the follo
 1. The tool starts an HTTP server on the specified address
 2. For each incoming request:
    - Forwards the request to the Apimimic service
-   - If proxy mode is enabled and the Apimimic response indicates proxying:
+   - If proxy mode is enabled for the given request and the Apimimic response indicates proxying:
      - Forwards the original request to the specified backend
-   - Otherwise, returns the response from Apimimic
-
-## Error Handling
-
-The tool includes comprehensive error handling for:
-- Missing authentication token
-- Failed connections to Apimimic service
-- Failed connections to local backend
-- Invalid configuration
-- Request/response processing errors
+   - Otherwise, returns the mocked response from Apimimic
 
 ## License
 

@@ -29,16 +29,8 @@ pub enum Commands {
         #[arg(short, long, default_value = "https://cli.apimimic.com")]
         remote: String,
 
-        /// Authorization token (overrides saved token)
-        #[arg(short, long)]
-        token: Option<String>,
-
-        /// Enable proxy mode (forward requests to a local backend)
+        /// Target server URL (if provided, unmocked requests will be forwarded here)
         #[arg(long)]
-        proxy: bool,
-
-        /// Local backend URL (required if proxy mode is enabled)
-        #[arg(long)]
-        backend: Option<String>,
+        server: Option<String>,
     },
 } 
