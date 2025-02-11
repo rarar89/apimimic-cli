@@ -58,7 +58,7 @@ apimimic run --listen 127.0.0.1:3000 --project YOUR_PROJECT_ID --server http://l
 
 ## Configuration
 
-The tool stores configuration (including your authentication token) in the following location:
+The tool stores configuration in the following location:
 - Windows: `%APPDATA%\apimimic\apimimic-cli\config\config.json`
 - macOS: `~/Library/Application Support/com.apimimic.apimimic-cli/config.json`
 - Linux: `~/.config/apimimic-cli/config.json`
