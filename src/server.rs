@@ -1,12 +1,16 @@
-use std::io::Read;
-use tiny_http::{Header, Request, Response, Server};
-use std::thread;
 use log::{info, error, debug};
 use serde_json::json;
+use std::net::SocketAddr;
+use hyper::{Body, Request, Response, Server};
+use hyper::service::{make_service_fn, service_fn};
+use tokio::sync::oneshot;
 use url;
+use std::convert::Infallible;
+use hyper::body::HttpBody;
+use bytes::Buf;
 
 /// Starts the HTTP server and handles incoming requests
-pub fn run_server(
+pub async fn run_server(
     listen: &str,
     remote_base: String,
     project_id: String,
@@ -17,234 +21,260 @@ pub fn run_server(
     if proxy_enabled {
         info!("Proxy mode enabled. Target server: {:?}", target_server);
     }
-    let server = Server::http(listen).unwrap();
 
-    // Handle each incoming request in its own thread.
-    for request in server.incoming_requests() {
+    let addr: SocketAddr = listen.parse().expect("Invalid address format");
+
+    let remote_base = remote_base.clone();
+    let project_id = project_id.clone();
+    let target_server = target_server.clone();
+
+    let make_svc = make_service_fn(move |_conn| {
         let remote_base = remote_base.clone();
-        let target_server = target_server.clone();
         let project_id = project_id.clone();
-        thread::spawn(move || {
-            handle_request(request, remote_base, project_id, proxy_enabled, target_server)
-        });
+        let target_server = target_server.clone();
+
+        async move {
+            Ok::<_, Infallible>(service_fn(move |req| {
+                handle_request(
+                    req,
+                    remote_base.clone(),
+                    project_id.clone(),
+                    proxy_enabled,
+                    target_server.clone(),
+                )
+            }))
+        }
+    });
+
+    let server = Server::bind(&addr).serve(make_svc);
+    
+    // Create a channel for shutdown signal
+    let (tx, rx) = oneshot::channel::<()>();
+    
+    // Handle shutdown gracefully
+    tokio::spawn(async move {
+        tokio::signal::ctrl_c().await.expect("Failed to listen for ctrl+c");
+        let _ = tx.send(());
+    });
+
+    info!("Server running on http://{}", addr);
+    
+    if let Err(e) = server.with_graceful_shutdown(async {
+        rx.await.ok();
+    }).await {
+        error!("Server error: {}", e);
     }
 }
 
 /// Handles an individual incoming HTTP request.
-fn handle_request(
-    mut request: Request,
+async fn handle_request(
+    req: Request<Body>,
     remote_base: String,
     project_id: String,
     proxy_enabled: bool,
     target_server: Option<String>,
-) {
-    info!("Received request: {} {}", request.method(), request.url());
-    debug!("Request headers: {:?}", request.headers());
+) -> Result<Response<Body>, Infallible> {
+    
+    // First get copies/clones of everything we need
+    let method_str = req.method().to_string();
+    let uri_string = req.uri().to_string();
+    let request_url = req.uri().path_and_query()
+        .map(|p| p.as_str())
+        .unwrap_or("")
+        .to_string();
+    let headers = req.headers().clone();
+    
+    // Convert headers to Vec after cloning
+    let headers: Vec<(String, String)> = headers
+        .iter()
+        .filter(|(name, _)| name.as_str().to_lowercase() != "host")
+        .map(|(name, value)| {
+            (name.as_str().to_string(), 
+             value.to_str().unwrap_or_default().to_string())
+        })
+        .collect();
 
-    // Read the request body.
-    let mut body = Vec::new();
-    if let Err(e) = request.as_reader().read_to_end(&mut body) {
-        error!("Failed to read request body: {}", e);
-        let _ = request.respond(Response::from_string(format!("Failed to read request: {}", e))
-            .with_status_code(500));
-        return;
-    }
-    debug!("Request body length: {} bytes", body.len());
-
-    // Construct the remote URL by concatenating the remote base with the request URL.
-    let remote_url = remote_base;
-    info!("Forwarding request to API Mimic: {}", remote_url);
-
-    // Forward the request to the remote API Mimic service.
-    let method_str = match request.method() {
-        &tiny_http::Method::Get => "GET",
-        &tiny_http::Method::Post => "POST",
-        &tiny_http::Method::Put => "PUT",
-        &tiny_http::Method::Delete => "DELETE",
-        &tiny_http::Method::Head => "HEAD",
-        &tiny_http::Method::Connect => "CONNECT",
-        &tiny_http::Method::Options => "OPTIONS",
-        &tiny_http::Method::Trace => "TRACE",
-        &tiny_http::Method::Patch => "PATCH",
-        _ => "GET", // Default to GET for any unhandled methods
+    // Now we can safely consume the request
+    let whole_body = match req.collect().await {
+        Ok(body) => body.aggregate(),
+        Err(e) => {
+            error!("Failed to collect body: {}", e);
+            return Ok(Response::builder()
+                .status(500)
+                .body(Body::from(format!("Failed to collect body: {}", e)))
+                .unwrap());
+        }
     };
 
-    // Collect original request headers
-    let original_headers = process_headers(request.headers());
+    let remaining = whole_body.remaining();
+    let data: serde_json::Value = match serde_json::from_reader(whole_body.reader()) {
+        Ok(data) => data,
+        Err(e) => {
+            if remaining == 0 {
+                // If body is empty, use empty JSON object
+                serde_json::Value::Object(serde_json::Map::new())
+            } else {
+                error!("Failed to parse JSON: {}", e);
+                return Ok(Response::builder()
+                    .status(400)
+                    .body(Body::from(format!("Invalid JSON: {}", e)))
+                    .unwrap());
+            }
+        }
+    };
 
-    // In handle_request function, before sending the request to API Mimic:
-    let request_url = request.url().to_string();
+    // And respond with the new JSON.
+    let json = serde_json::to_string(&data).unwrap();
 
-    debug!("request_url: {}", request_url);
-    
-    // Create the JSON payload and serialize it
+    // Create the JSON payload
     let payload = json!({
         "method": method_str,
-        "headers": original_headers.clone().into_iter().collect::<std::collections::HashMap<_, _>>(),
-        "body": body,
-        "path": request_url.trim_start_matches('/').to_string() // Ensure path is a proper string
+        "headers": headers.clone().into_iter().collect::<std::collections::HashMap<_, _>>(),
+        "body": data,
+        "path": request_url.trim_start_matches('/').to_string()
     });
 
- 
+    let payload_to_send = &serde_json::json!({
+        "method": method_str,
+        "headers": headers.clone().into_iter().collect::<std::collections::HashMap<_, _>>(),
+        "body": data,
+        "path": request_url.trim_start_matches('/').to_string()
+    });
 
-    // Log the exact payload being sent for debugging
-    debug!("Raw JSON payload being sent: {}", payload_str);
+    debug!("Payload: {}", payload_to_send);
 
-    // Send the request to API Mimic service
-    let mut request_builder = ureq::request("POST", &remote_url)
-        .set("apimimic-project-id", &project_id)
-        .set("Content-Type", "application/json");
+    // Create reqwest client
+    let client = reqwest::Client::new();
+    
+    // Build request to API Mimic
+    let mut mimic_req = client.post(&remote_base)
+        .header("apimimic-project-id", &project_id)
+        .header("Content-Type", "Application/json")
+        .header("Content-Length", payload_to_send.to_string().len().to_string());
 
-    // Add proxy header if proxy mode is enabled and target server is set
     if proxy_enabled && target_server.is_some() {
         if let Some(target) = &target_server {
-            request_builder = request_builder.set("apimimic-cli-proxy", target);
+            mimic_req = mimic_req.header("apimimic-cli-proxy", target);
         }
     }
 
-    // Add original headers to the API Mimic request
-    for (name, value) in &original_headers {
-        request_builder = request_builder.set(name, value);
-        debug!("Added header to API Mimic request: {} = {}", name, value);
+    // Add original headers
+    for (name, value) in &headers {
+        mimic_req = mimic_req.header(name, value);
     }
 
-    debug!("Payload to API Mimic: {}", payload_str);
-
-    let remote_resp = request_builder.send_string(&payload_str) ;
-
-    // Response from API Mimic
-    match remote_resp {
-        Ok(resp) => {
-            let status = resp.status();
-            info!("Received response from API Mimic with status: {}", status);
-            let mut headers = Vec::new();
-            for h in resp.headers_names() {
-                if let Some(value) = resp.header(&h) {
-                    headers.push((h.to_string(), value.to_string()));
-                    debug!("Response header: {} = {}", h, value);
-                }
-            }
-            
-            let mut buf = Vec::new();
-            if let Err(e) = resp.into_reader().read_to_end(&mut buf) {
-                error!("Error reading remote response body: {}", e);
-                let _ = request.respond(
-                    Response::from_string(format!("Failed to read remote response: {}", e))
-                        .with_status_code(500),
-                );
-                return;
-            }
-            debug!("Response body length: {} bytes", buf.len());
-
-            // Check if we need to proxy based on the apimimic-proxy-request header
-            let should_proxy = proxy_enabled 
-                && target_server.is_some() 
-                && headers.iter().any(|(h, _)| h.to_lowercase() == "apimimic-proxy-request");
-
-            if should_proxy {
-                if let Some(server_url) = target_server {
-                    let server_url = format!("{}{}", server_url.trim_end_matches('/'), request.url());
-                    info!("Proxying request to target server: {}", server_url);
-                    
-                    let mut proxy_request = ureq::request(method_str, &server_url);
-                    
-                    // Add original request headers to proxy request, including the host header
-                    debug!("Original headers: {:?}", original_headers);
-                    for (name, value) in original_headers {
-                        if name.to_lowercase() == "host" {
-                            // Skip the host header here as we'll set it separately
-                            continue;
-                        }
-                        proxy_request = proxy_request.set(&name, &value);
-                        debug!("Added header to proxy request: {} = {}", name, value);
-                    }
-
-                    // Set the host header from the target server URL
-                    if let Ok(url) = url::Url::parse(&server_url) {
-                        if let Some(host) = url.host_str() {
-                            let host_value = if let Some(port) = url.port() {
-                                format!("{}:{}", host, port)
-                            } else {
-                                host.to_string()
-                            };
-                            proxy_request = proxy_request.set("Host", &host_value);
-                            debug!("Set host header for proxy request: {}", host_value);
-                        }
-                    }
-
-
-                    // Send the request to the target (real backend api) server
-                    match proxy_request.send_bytes(&body) {
-                        Ok(proxy_resp) => {
-                            let proxy_status = proxy_resp.status();
-                            info!("Received response from target server with status: {}", proxy_status);
-                            let mut proxy_headers = Vec::new();
-                            for h in proxy_resp.headers_names() {
-                                if let Some(val) = proxy_resp.header(&h) {
-                                    proxy_headers.push(Header::from_bytes(h.as_bytes(), val.as_bytes()).unwrap());
-                                    debug!("Proxy response header: {} = {}", h, val);
-                                }
-                            }
-                            let mut proxy_body = Vec::new();
-                            if let Err(e) = proxy_resp.into_reader().read_to_end(&mut proxy_body) {
-                                error!("Error reading target server response body: {}", e);
-                                let _ = request.respond(
-                                    Response::from_string("Failed to read proxy response body")
-                                        .with_status_code(500),
-                                );
-                                return;
-                            }
-                            debug!("Proxy response body length: {} bytes", proxy_body.len());
-
-                            let response = Response::from_data(proxy_body).with_status_code(proxy_status);
-                            let response = proxy_headers.into_iter().fold(response, |resp, h| resp.with_header(h));
-                            let _ = request.respond(response);
-                        }
-                        Err(e) => {
-                            error!("Failed to contact target server: {}", e);
-                            let _ = request.respond(
-                                Response::from_string(format!("Failed to contact target server: {}", e))
-                                    .with_status_code(502),
-                            );
-                        }
-                    }
-                    return;
-                }
-            }
-
-            // Return the API Mimic response if not proxying
-            info!("Returning API Mimic response with status: {}", status);
-            let response = {
-                let headers = headers
-                    .into_iter()
-                    .map(|(k, v)| Header::from_bytes(k.as_bytes(), v.as_bytes()).unwrap())
-                    .collect::<Vec<_>>();
-                let mut resp = Response::from_data(buf).with_status_code(status);
-                for header in headers {
-                    resp = resp.with_header(header);
-                }
-                resp
-            };
-
-            let _ = request.respond(response);
-        }
+    // Send request to API Mimic
+    let mimic_resp = match mimic_req.json(&payload_to_send).send().await {
+        Ok(resp) => resp,
         Err(e) => {
             error!("Failed to contact remote server: {}", e);
-            let _ = request.respond(
-                Response::from_string(format!("Failed to contact remote server: {}", e))
-                    .with_status_code(502),
+            return Ok(Response::builder()
+                .status(502)
+                .body(Body::from(format!("Failed to contact remote server: {}", e)))
+                .unwrap());
+        }
+    };
+
+    let status = mimic_resp.status();
+    let mimic_headers = mimic_resp.headers().clone();
+    let mimic_body = match mimic_resp.bytes().await {
+        Ok(bytes) => bytes,
+        Err(e) => {
+            error!("Error reading remote response body: {}", e);
+            return Ok(Response::builder()
+                .status(500)
+                .body(Body::from("Failed to read remote response body"))
+                .unwrap());
+        }
+    };
+
+    // Check if we need to proxy
+    let should_proxy = proxy_enabled 
+        && target_server.is_some() 
+        && mimic_headers.get("apimimic-proxy-request").is_some();
+
+    if should_proxy {
+        if let Some(server_url) = target_server {
+            let server_url = format!("{}{}", server_url.trim_end_matches('/'), uri_string);
+            info!("Proxying request to target server: {}", server_url);
+
+            let mut proxy_req = client.request(
+                reqwest::Method::from_bytes(method_str.as_bytes()).unwrap(),
+                &server_url
             );
+
+            // Add original headers to proxy request
+            for (name, value) in headers {
+                if name.to_lowercase() != "host" {
+                    proxy_req = proxy_req.header(&name, &value);
+                }
+            }
+
+            // Set host header from target server URL
+            if let Ok(parsed_url) = url::Url::parse(&server_url) {
+                if let Some(host) = parsed_url.host_str() {
+                    let host_value = if let Some(port) = parsed_url.port() {
+                        format!("{}:{}", host, port)
+                    } else {
+                        host.to_string()
+                    };
+                    proxy_req = proxy_req.header("Host", &host_value);
+                }
+            }
+
+            // Send request to target server
+            match proxy_req.body(Body::from(json)).send().await {
+                Ok(proxy_resp) => {
+                    let proxy_status = proxy_resp.status();
+                    let proxy_headers = proxy_resp.headers().clone();
+                    let proxy_body = match proxy_resp.bytes().await {
+                        Ok(bytes) => bytes,
+                        Err(e) => {
+                            error!("Error reading target server response body: {}", e);
+                            return Ok(Response::builder()
+                                .status(500)
+                                .body(Body::from("Failed to read proxy response body"))
+                                .unwrap());
+                        }
+                    };
+
+                    let mut response = Response::builder()
+                        .status(proxy_status);
+
+                    // Add proxy response headers
+                    if let Some(headers) = response.headers_mut() {
+                        for (name, value) in proxy_headers {
+                            if let Some(name) = name {
+                                headers.insert(name, value);
+                            }
+                        }
+                    }
+
+                    return Ok(response.body(Body::from(proxy_body)).unwrap());
+                }
+                Err(e) => {
+                    error!("Failed to contact target server: {}", e);
+                    return Ok(Response::builder()
+                        .status(502)
+                        .body(Body::from(format!("Failed to contact target server: {}", e)))
+                        .unwrap());
+                }
+            }
         }
     }
-}
 
-fn process_headers(headers: &[Header]) -> Vec<(String, String)> {
-    headers
-        .iter()
-        .filter(|header| header.field.as_str().to_string().to_lowercase() != "host")
-        .map(|header| (
-            header.field.as_str().to_string(),
-            header.value.as_str().to_string()
-        ))
-        .collect()
+    // Return API Mimic response if not proxying
+    let mut response = Response::builder()
+        .status(status);
+
+    // Add API Mimic response headers
+    if let Some(headers) = response.headers_mut() {
+        for (name, value) in mimic_headers {
+            if let Some(name) = name {
+                headers.insert(name, value);
+            }
+        }
+    }
+
+    Ok(response.body(Body::from(mimic_body)).unwrap())
 } 

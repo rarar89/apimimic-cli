@@ -6,7 +6,8 @@ use clap::Parser;
 use cli::{Cli, Commands};
 use env_logger::Env;
 
-fn main() {
+#[tokio::main]
+async fn main() {
     // Initialize logging
     env_logger::Builder::from_env(Env::default().default_filter_or("info"))
         .format_timestamp_millis()
@@ -27,7 +28,6 @@ fn main() {
             println!("Project saved successfully.");
         }
         Some(Commands::Run { project, listen, remote, server }) => {
-            // Use the project provided on the command line to override the saved project.
             let project = if project.is_empty() {
                 if config.project.is_empty() {
                     eprintln!("No project provided. Use the -p/--project flag or `set-project` command.");
@@ -44,7 +44,7 @@ fn main() {
                 project,
                 server.is_some(),
                 server.clone(),
-            );
+            ).await;
         }
         None => {
             // Default to showing help
