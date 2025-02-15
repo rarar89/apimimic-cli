@@ -1,9 +1,11 @@
 use log::{info, error};
 use std::net::SocketAddr;
+use std::sync::Arc;
 use hyper::Server;
 use hyper::service::{make_service_fn, service_fn};
 use tokio::sync::oneshot;
 use std::convert::Infallible;
+use crate::ping::EndpointManager;
 
 mod request;
 
@@ -14,6 +16,7 @@ pub async fn run_server(
     project_id: String,
     proxy_enabled: bool,
     target_server: Option<String>,
+    remote_ping: String,
 ) {
     info!("Starting server on {} with project_id: {}", listen, project_id);
     if proxy_enabled {
@@ -26,10 +29,24 @@ pub async fn run_server(
     let project_id = project_id.clone();
     let target_server = target_server.clone();
 
+    let endpoint_manager = EndpointManager::new();
+    
+    // Start ping service
+    Arc::clone(&endpoint_manager).start_ping_service(
+        listen.to_string(),
+        remote_base.clone(),
+        remote_ping,
+        project_id.clone(),
+        target_server.clone(),
+    ).await;
+
+    let endpoint_manager = Arc::clone(&endpoint_manager);
+
     let make_svc = make_service_fn(move |_conn| {
         let remote_base = remote_base.clone();
         let project_id = project_id.clone();
         let target_server = target_server.clone();
+        let endpoint_manager = Arc::clone(&endpoint_manager);
 
         async move {
             Ok::<_, Infallible>(service_fn(move |req| {
@@ -39,6 +56,7 @@ pub async fn run_server(
                     project_id.clone(),
                     proxy_enabled,
                     target_server.clone(),
+                    Arc::clone(&endpoint_manager),
                 )
             }))
         }

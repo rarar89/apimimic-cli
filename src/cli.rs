@@ -32,5 +32,9 @@ pub enum Commands {
         /// Target server URL (if provided, unmocked requests will be forwarded here)
         #[arg(long)]
         server: Option<String>,
+
+        /// Remote ping URL (default: https://cli.apimimic.com/ping)
+        #[arg(long, default_value = "https://cli-checkin.apimimic.com")]
+        remote_ping: String,
     },
 } 

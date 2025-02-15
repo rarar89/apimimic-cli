@@ -1,6 +1,7 @@
 mod cli;
 mod config;
 mod server;
+mod ping;
 
 use clap::Parser;
 use cli::{Cli, Commands};
@@ -27,7 +28,7 @@ async fn main() {
             }
             println!("Project saved successfully.");
         }
-        Some(Commands::Run { project, listen, remote, server }) => {
+        Some(Commands::Run { project, listen, remote, server, remote_ping }) => {
             let project = if project.is_empty() {
                 if config.project.is_empty() {
                     eprintln!("No project provided. Use the -p/--project flag or `set-project` command.");
@@ -44,6 +45,7 @@ async fn main() {
                 project,
                 server.is_some(),
                 server.clone(),
+                remote_ping.clone(),
             ).await;
         }
         None => {
