@@ -1,6 +1,27 @@
+<p align="center">
+  <img src="https://apimimic.com/logo-dark.png" alt="Apimimic Logo" width="300"/>
+</p>
+
+
 # Apimimic CLI
 
-A command-line interface tool for API mocking and proxying using [Apimimic](https://apimimic.com). This tool allows you to intercept HTTP requests and return mocked responses from Apimimic service and proxy unmocked requests to a local or remotebackend.
+A command-line interface tool for API mocking and proxying using [Apimimic](https://apimimic.com). Apimimic is a powerful API mocking platform that allows you to create, manage, and simulate API endpoints with ease. This CLI tool integrates with the Apimimic service to provide local API mocking and proxying capabilities.
+
+## What is Apimimic?
+
+Apimimic is a comprehensive API mocking solution that offers:
+
+- 🚀 Fast and intuitive API mocking through a user-friendly interface
+- 🔄 Proxy mode to selectively mock endpoints while forwarding others to your real API
+- 🤖 AI-powered response generation
+- ⚡ Automatic CRUD operation generation
+- 📚 OpenAPI specification support
+
+The CLI tool extends these capabilities to your local development environment, allowing you to:
+
+- Intercept HTTP requests and return mocked responses from your Apimimic project
+- Forward unmocked requests to your actual backend when using proxy mode
+- Seamlessly integrate with your development workflow
 
 ## Features
 
@@ -65,12 +86,13 @@ The tool stores configuration in the following location:
 
 ## How It Works
 
-1. The tool starts an HTTP server on the specified address
-2. For each incoming request:
-   - Forwards the request to the Apimimic service
-   - If proxy mode is enabled for the given request and the Apimimic response indicates proxying:
-     - Forwards the original request to the specified backend
-   - Otherwise, returns the mocked response from Apimimic
+1. Create and configure your mock API endpoints through the Apimimic web interface (https://apimimic.com)
+2. Use the CLI tool to start a local server that connects to your Apimimic project
+3. Direct your application's API requests to the CLI server
+4. The CLI tool will:
+   - Forward requests to the Apimimic service
+   - Return mocked responses for configured endpoints
+   - Proxy unmocked requests to your real backend (when proxy mode is enabled)
 
 ## License
 
