@@ -47,9 +47,8 @@ The binary will be available in `target/release/`.
 
 Project key can be found in Apimimic dashboard in project view.
 
-<p align="center">
-  <img src="https://apimimic.com/project-key-example-dark.jpg" alt="Apimimic Logo" width="300"/>
-</p>
+  <img src="https://apimimic.com/project-key-example-dark.jpg" alt="Apimimic Logo" width="400"/>
+
 
 You can pre-set your project key by running:
 
