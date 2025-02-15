@@ -12,7 +12,7 @@ A command-line interface tool for API mocking and proxying using [Apimimic](http
 Apimimic is a comprehensive API mocking solution that offers:
 
 - 🚀 Fast and intuitive API mocking through a user-friendly interface
-- 🔄 Proxy mode to selectively mock endpoints while forwarding others to your real API
+- 🔀 Proxy mode to selectively mock endpoints while forwarding others to your real API
 - 🤖 AI-powered response generation
 - ⚡ Automatic CRUD operation generation
 - 📚 OpenAPI specification support
@@ -22,16 +22,18 @@ The CLI tool extends these capabilities to your local development environment, a
 - Intercept HTTP requests and return mocked responses from your Apimimic project
 - Forward unmocked requests to your actual backend when using proxy mode
 - Seamlessly integrate with your development workflow
-
-## Features
-
-- 🔄 Mock API responses using Apimimic service
-- 🔀 Proxy mode for forwarding unmocked requests to local or remote backend
-- 🌐 Configurable listening address and remote API endpoint
+- Configure listening address and remote API endpoint address
 
 ## Installation
 
-To install the Apimimic CLI, you'll need to have Rust and Cargo installed on your system. Then you can build the project:
+### Option 1: Download Release Binary (Recommended)
+
+Download the latest release for your platform (Windows, macOS, or Linux) from our [GitHub Releases page](https://github.com/rarar89/apimimic-cli/releases).
+
+
+### Option 2: Build from Source
+
+To build from source, you'll need to have Rust and Cargo installed on your system:
 
 ```bash
 cargo build --release
@@ -42,6 +44,12 @@ The binary will be available in `target/release/`.
 ## Usage
 
 ### Setting Project Key
+
+Project key can be found in Apimimic dashboard in project view.
+
+<p align="center">
+  <img src="https://apimimic.com/project-key-example-dark.jpg" alt="Apimimic Logo" width="300"/>
+</p>
 
 You can pre-set your project key by running:
 
@@ -72,9 +80,9 @@ apimimic run --listen 127.0.0.1:3000 --project YOUR_PROJECT_KEY --server http://
 - `help`: Show help message
 - `set-project <key>`: Save the project KEY
 - `run`: Start the HTTP server with the following options:
-  - `-l, --listen <address>`: Local address to listen on (default: 0.0.0.0:8080)
+  - `-p, --project <key>`: Project KEY. Required if not set with `apimimic set-project`
+  - `-l, --listen <address>`: Local address to listen on (default: 127.0.0.1:8080)
   - `-r, --remote <url>`: Remote API Mimic URL (default: https://cli.apimimic.com)
-  - `-p, --project <key>`: Project KEY
   - `--server <url>`: real api server URL (required if proxy mode is enabled on apimimic.com)
 
 ## Configuration
