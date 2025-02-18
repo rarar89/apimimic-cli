@@ -2,10 +2,12 @@ mod cli;
 mod config;
 mod server;
 mod ping;
+mod utils;
 
 use clap::Parser;
 use cli::{Cli, Commands};
 use env_logger::Env;
+use utils::{parse_listen_address, parse_server_url};
 
 #[tokio::main]
 async fn main() {
@@ -29,22 +31,33 @@ async fn main() {
             println!("Project saved successfully.");
         }
         Some(Commands::Run { project, listen, remote, server, remote_ping }) => {
-            let project = if project.is_empty() {
-                if config.project.is_empty() {
+            let project = match project {
+                Some(p) if !p.is_empty() => p,
+                _ if !config.project.is_empty() => &config.project.clone(),
+                _ => {
                     eprintln!("No project provided. Use the -p/--project flag or `set-project` command.");
                     std::process::exit(1);
                 }
-                config.project.clone()
-            } else {
-                project.clone()
             };
 
+            // Parse listen address
+            let listen = match parse_listen_address(listen) {
+                Ok(addr) => addr,
+                Err(e) => {
+                    eprintln!("Invalid listen address: {}", e);
+                    std::process::exit(1);
+                }
+            };
+
+            // Parse server URL
+            let server = parse_server_url(server);
+
             server::run_server(
-                listen,
+                &listen,
                 remote.clone(),
-                project,
+                project.clone(),
                 server.is_some(),
-                server.clone(),
+                server,
                 remote_ping.clone(),
             ).await;
         }

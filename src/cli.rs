@@ -10,22 +10,22 @@ pub struct Cli {
 
 #[derive(Subcommand)]
 pub enum Commands {
-    /// Save the default project ID.
+    /// Save the default project Key.
     SetProject {
-        /// The project ID to be saved.
+        /// The project Key to be saved.
         project: String,
     },
     /// Run the CLI utility (starts the HTTP server).
     Run {
-        /// Project ID
+        /// Project Key
         #[arg(short, long)]
-        project: String,
+        project: Option<String>,
 
-        /// Local address to listen on (default: 127.0.0.1:8080)
+        /// Local address to listen on
         #[arg(short, long, default_value = "127.0.0.1:8080")]
         listen: String,
 
-        /// Remote API Mimic URL (default: https://cli.apimimic.com)
+        /// Remote API Mimic URL
         #[arg(short, long, default_value = "https://cli.apimimic.com")]
         remote: String,
 
@@ -33,7 +33,7 @@ pub enum Commands {
         #[arg(long)]
         server: Option<String>,
 
-        /// Remote ping URL (default: https://cli.apimimic.com/ping)
+        /// Remote ping URL
         #[arg(long, default_value = "https://cli-checkin.apimimic.com")]
         remote_ping: String,
     },
