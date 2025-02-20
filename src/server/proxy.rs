@@ -3,6 +3,7 @@ use log::{debug, error, info};
 use std::convert::Infallible;
 use tokio::time::sleep;
 use std::time::Duration;
+use itertools::Itertools;
 
 /// Handles proxying a request to a target server
 pub async fn proxy_request(
@@ -49,6 +50,8 @@ pub async fn proxy_request(
         Ok(proxy_resp) => {
             let proxy_status = proxy_resp.status();
             let proxy_headers = proxy_resp.headers().clone();
+            
+            
             let proxy_body = match proxy_resp.bytes().await {
                 Ok(bytes) => bytes,
                 Err(e) => {
@@ -59,16 +62,32 @@ pub async fn proxy_request(
                         .unwrap());
                 }
             };
-
+            
+            let headers_clone = proxy_headers.clone();
+            let cookies: Vec<_> = headers_clone
+                .get_all("set-cookie")
+                .iter()
+                .filter_map(|v| v.to_str().ok())
+                .collect();
+            
+          
             let mut response_builder = Response::builder()
                 .status(proxy_status);
 
-            // Add proxy response headers
+            // Add regular headers
             debug!("response headers: {:?}", proxy_headers);
-            for (name, value) in proxy_headers.into_iter() {
+            for (name, value) in &proxy_headers.into_iter().collect_vec() {
                 if let Some(name) = name {
-                    response_builder = response_builder.header(name.as_str(), value);
+                    if name != "set-cookie" {  // Skip set-cookie headers as we'll handle them separately
+                      response_builder = response_builder.header(name.as_str(), value);
+                    }
                 }
+            }
+
+            // Add cookies
+            for cookie in cookies {
+                debug!("adding cookie header: {:?}", cookie);
+                response_builder = response_builder.header("set-cookie", cookie);
             }
 
             debug!("response headers after appending: {:?}", response_builder.headers_mut());
