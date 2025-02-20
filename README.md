@@ -36,6 +36,8 @@ Download the latest release for your platform (Windows, macOS, or Linux) from ou
 To build from source, you'll need to have Rust and Cargo installed on your system:
 
 ```bash
+git clone https://github.com/rarar89/apimimic-cli.git
+cd apimimic-cli
 cargo build --release
 ```
 

@@ -1,3 +1,6 @@
+pub mod request;
+pub mod proxy; 
+
 use log::{info, error};
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -6,8 +9,6 @@ use hyper::service::{make_service_fn, service_fn};
 use tokio::sync::oneshot;
 use std::convert::Infallible;
 use crate::ping::EndpointManager;
-
-mod request;
 
 /// Starts the HTTP server and handles incoming requests
 pub async fn run_server(
