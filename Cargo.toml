@@ -1,5 +1,5 @@
 [package]
-name = "apimimic_cli"
+name = "apimimic"
 version = "1.0.46"
 edition = "2021"
 homepage = "https://apimimic.com"

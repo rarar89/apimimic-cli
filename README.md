@@ -19,7 +19,7 @@ Apimimic is a comprehensive API mocking solution that offers:
 
 The CLI tool extends these capabilities to your local development environment, allowing you to:
 
-- Intercept HTTP requests and return mocked responses from your Apimimic project
+- Intercept HTTP requests and return mocked JSON responses from your Apimimic project
 - Forward unmocked requests to your actual backend when using proxy mode
 - Seamlessly integrate with your development workflow
 - Configure listening address and remote API endpoint address

@@ -77,7 +77,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "apimimic_cli"
+name = "apimimic"
 version = "1.0.46"
 dependencies = [
  "base64 0.22.1",
