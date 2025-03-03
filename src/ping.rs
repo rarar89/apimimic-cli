@@ -87,6 +87,9 @@ impl EndpointManager {
                     .await {
                     Ok(response) => {
                         if response.status().is_success() {
+
+                            info!("Apimimic ping request successful: {}", response.status());
+
                             match response.json::<PingResponse>().await {
                                 Ok(ping_response) => {
                                     info!("Apimimic ping successful");

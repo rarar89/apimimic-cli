@@ -23,8 +23,6 @@ pub async fn proxy_request(
         &full_url
     );
 
-    debug!("headers sent to target server: {:?}", headers);
-
     // Add original headers to proxy request
     for (name, value) in headers {
         if name.to_lowercase() != "host" {
@@ -40,9 +38,27 @@ pub async fn proxy_request(
             } else {
                 host.to_string()
             };
-            debug!("host_value: {}", host_value);
             proxy_req = proxy_req.header("Host", &host_value);
         }
+    }
+
+    debug!("proxy_req: {:?}", proxy_req);
+
+    // For debugging body content
+    let body = body.into();
+
+    let content_length = if let Some(bytes) = body.as_bytes() {
+        debug!("body content: {:?}", String::from_utf8_lossy(bytes));
+        Some(bytes.len())
+    } else {
+        debug!("body is not available as bytes (likely a stream)");
+        None
+    };
+
+    // Add content-length header if we have the body size
+    if let Some(length) = content_length {
+        debug!("adding content-length header: {}", length);
+        proxy_req = proxy_req.header("Content-Length", length);
     }
 
     // Send request to target server
