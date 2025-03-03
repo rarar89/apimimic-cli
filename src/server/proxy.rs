@@ -44,23 +44,7 @@ pub async fn proxy_request(
 
     debug!("proxy_req: {:?}", proxy_req);
 
-    // For debugging body content
     let body = body.into();
-
-    let content_length = if let Some(bytes) = body.as_bytes() {
-        debug!("body content: {:?}", String::from_utf8_lossy(bytes));
-        Some(bytes.len())
-    } else {
-        debug!("body is not available as bytes (likely a stream)");
-        None
-    };
-
-    // Add content-length header if we have the body size
-    if let Some(length) = content_length {
-        debug!("adding content-length header: {}", length);
-        proxy_req = proxy_req.header("Content-Length", length);
-    }
-
     // Send request to target server
     match proxy_req.body(body).send().await {
         Ok(proxy_resp) => {
