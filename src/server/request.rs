@@ -39,7 +39,7 @@ pub async fn handle(
             error!("Failed to collect body: {}", e);
             return Ok(Response::builder()
                 .status(500)
-                .body(Body::from(format!("Failed to collect body: {}", e)))
+                .body(Body::from(format!("Apimimic: Failed to collect body: {}", e)))
                 .unwrap());
         }
     };
@@ -53,9 +53,11 @@ pub async fn handle(
                 serde_json::Value::Object(serde_json::Map::new())
             } else {
                 error!("Failed to parse JSON: {}", e);
+                let error_json = serde_json::json!({"message": format!("Apimimic: Invalid JSON: {}", e)}).to_string();
                 return Ok(Response::builder()
-                    .status(400)
-                    .body(Body::from(format!("Invalid JSON: {}", e)))
+                    .status(500)
+                    .header("Content-Type", "application/json")
+                    .body(Body::from(error_json))
                     .unwrap());
             }
         }
@@ -131,9 +133,11 @@ pub async fn handle(
         Ok(resp) => resp,
         Err(e) => {
             error!("Failed to contact remote server: {}", e);
+            let error_json = serde_json::json!({"message": format!("Apimimic: Failed to contact remote server: {}", e)}).to_string();
             return Ok(Response::builder()
-                .status(502)
-                .body(Body::from(format!("Failed to contact remote server: {}", e)))
+                .status(500)
+                .header("Content-Type", "application/json")
+                .body(Body::from(error_json))
                 .unwrap());
         }
     };
@@ -144,9 +148,11 @@ pub async fn handle(
         Ok(bytes) => bytes,
         Err(e) => {
             error!("Error reading remote response body: {}", e);
+            let error_json = serde_json::json!({"message": "Apimimic: Failed to read remote response body"}).to_string();
             return Ok(Response::builder()
                 .status(500)
-                .body(Body::from("Failed to read remote response body"))
+                .header("Content-Type", "application/json")
+                .body(Body::from(error_json))
                 .unwrap());
         }
     };

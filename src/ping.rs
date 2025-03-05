@@ -88,11 +88,11 @@ impl EndpointManager {
                     Ok(response) => {
                         if response.status().is_success() {
 
-                            info!("Apimimic ping request successful: {}", response.status());
+                            let status = response.status();
 
                             match response.json::<PingResponse>().await {
                                 Ok(ping_response) => {
-                                    info!("Apimimic ping successful");
+                                    info!("Apimimic ping successful {}", status);
                                     debug!("Received ping response: {:?}", ping_response.message);
                                     let mut endpoints_write = endpoints.write().await;
                                     endpoints_write.clear();
